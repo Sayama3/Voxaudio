@@ -15,6 +15,6 @@ namespace Voxymore::Audio
 		Sound(const std::filesystem::path&);
 		~Sound();
 
-		Play();
+		void Play();
 	};
 }

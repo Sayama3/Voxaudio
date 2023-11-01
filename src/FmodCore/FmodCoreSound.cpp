@@ -14,4 +14,18 @@ namespace Voxymore::Audio
 		m_FmodSound->release();
 	}
 
+    void Sound::Play()
+    {
+
+    }
+
+    Sound::Sound(const std::filesystem::path &)
+    {
+        
+    }
+
+    Sound::~Sound() {
+        delete m_InternalSound;
+    }
+
 }
