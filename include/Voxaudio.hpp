@@ -8,15 +8,32 @@ namespace Voxymore::Audio
 {
 	using Vector3 = glm::vec3;
 
+    //TODO: Find a way to save and load all the sound definitions from disk
+    struct SoundDefinition
+    {
+        std::string name;
+        float defaultVolumedB = 30.0f;
+        float minDistance = 0.0f;
+        float maxDistance = 100.0f;
+        bool is3D = true;
+        bool isLooping = false;
+        bool isStream = false;
+    };
+
 	class Voxaudio
 	{
 	public:
 		static void Init(const std::filesystem::path& configFile = "");
-		static void Update();
+		static void Update(float deltaTimeSeconds);
 		static void Shutdown();
 
-		void LoadSound(const std::string& name, bool is3D = true, bool isLooping = false, bool isStream = false);
-		void UnloadSound(const std::string& name);
+        int RegisterSound(const SoundDefinition& soundDef, bool load = true);
+        void UnregisterSound(int soundId);
+
+        void LoadSound(int soundId);
+        void UnloadSound(int soundId);
+
+        //TODO: bool ShouldBeVirtual(bool allowOneShotVirtuals) const
 
 		void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up);
 		void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up, const Vector3& velocity);

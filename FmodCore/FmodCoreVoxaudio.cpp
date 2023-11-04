@@ -22,7 +22,7 @@ namespace Voxymore::Audio
     {
         s_Engine = new FmodCoreEngine(configFile);
     }
-    void Voxaudio::Update()
+    void Voxaudio::Update(float deltaTimeSeconds)
     {
         s_Engine->Update();
     }
@@ -31,7 +31,23 @@ namespace Voxymore::Audio
         delete s_Engine;
     }
 
+    int Voxaudio::RegisterSound(const SoundDefinition& soundDef, bool load)
+    {
 
+    }
+    void Voxaudio::UnregisterSound(int soundId)
+    {
+
+    }
+    void Voxaudio::LoadSound(int soundId)
+    {
+
+    }
+    void Voxaudio::UnloadSound(int soundId)
+    {
+
+    }
+/*
     void Voxaudio::LoadSound(const std::string& name, bool is3D, bool isLooping, bool isStream)
     {
         auto soundIt = s_Engine->Sounds.find(name);
@@ -61,7 +77,7 @@ namespace Voxymore::Audio
         soundIt->second->release();
         s_Engine->Sounds.erase(soundIt);
     }
-
+*/
     void Voxaudio::Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up)
     {
         auto fmodPos = FmodHelper::VectorToFmod(position);
