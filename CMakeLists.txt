@@ -7,29 +7,32 @@ include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT "20")
 
-option(USE_FMOD_STUDIO_BACKEND "Use Fmod Studio for the backend." OFF)
 option(USE_FMOD_CORE_BACKEND "Use Fmod Core for the backend." ON)
+option(USE_FMOD_STUDIO_BACKEND "Use Fmod Studio for the backend." OFF)
 
 add_subdirectory(lib/fmod)
 
-set(FMOD_STUDIO_SRC_FILES 
-    "src/FmodStudio/Voxaudio.cpp"
-    "src/FmodStudio/FmodStudioEngine.hpp"
-    "src/FmodStudio/FmodStudioEngine.cpp"
-    "src/FmodStudio/FmodStudioSound.hpp"
-    "src/FmodStudio/FmodStudioSound.cpp"
+set(GLOBAL_SRC_FILES
+    "include/Voxaudio.hpp"
 )
 
+#set(FMOD_STUDIO_SRC_FILES 
+#    "src/FmodStudio/Voxaudio.cpp"
+#    "src/FmodStudio/FmodStudioEngine.hpp"
+#    "src/FmodStudio/FmodStudioEngine.cpp"
+#)
+
 set(FMOD_CORE_SRC_FILES 
-    "src/FmodCore/Voxaudio.cpp"
+    "src/FmodCore/FmodCoreVoxaudio.cpp"
     "src/FmodCore/FmodCoreEngine.hpp"
     "src/FmodCore/FmodCoreEngine.cpp"
 )
 
 if(USE_FMOD_STUDIO_BACKEND)
-    set(SRC_FILES ${FMOD_STUDIO_SRC_FILES})
+    set(SRC_FILES ${GLOBAL_SRC_FILES} ${FMOD_STUDIO_SRC_FILES})
+    message(FATAL_ERROR "The FMOD Studio Backend is not ready yet...")
 elseif(USE_FMOD_CORE_BACKEND)
-    set(SRC_FILES ${FMOD_CORE_SRC_FILES})
+    set(SRC_FILES ${GLOBAL_SRC_FILES} ${FMOD_CORE_SRC_FILES})
 else()
     message(FATAL_ERROR "No backend selected...")
 endif()

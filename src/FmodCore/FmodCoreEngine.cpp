@@ -2,15 +2,33 @@
 
 namespace Voxymore::Audio
 {
-
-	Engine::Engine()
+	FmodCoreEngine::FmodCoreEngine()
 	{
-		FMOD::System_Create(&m_System);
-		m_System->init(128, FMOD_INIT_NORMAL, nullptr);
+		//TODO: Init Fmod.
+		//TODO: Recover previously saved data.
 	}
-	
-	Engine::~Engine()
+
+	FmodCoreEngine::~FmodCoreEngine()
 	{
-		m_System->release();
+		//TODO: Destroy Fmod.
+	}
+
+	void FmodCoreEngine::Update()
+	{
+		std::vector<ChannelMap::iterator> stoppedChannels;
+		for (auto it = Channels.begin(), itEnd = Channels.end(); it != itEnd; it++)
+		{
+			bool isPlaying;
+			channel->isPlaying(&isPlaying);
+			if (!isPlaying)
+			{
+				stoppedChannels.push_back(it);
+			}
+		}
+
+		for (auto& it : stoppedChannels)
+		{
+			Channels.erase(it);
+		}
 	}
 }
