@@ -5,79 +5,69 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define VIRTUALIZE_FADE_TIME 1.0f
+#define SILENCE_dB 0.0f
+
 namespace Voxymore::Audio
 {
+    FmodCoreEngine* s_Engine = nullptr;
+
     float Helper::dBToVolume(float dB)
     {
         return std::pow(10.0f, 0.05f * dB);
     }
+
     float Helper::VolumeTodB(float Volume)
     {
         return 20.0f * std::log10(Volume);
     }
 
-    FmodCoreEngine* s_Engine = nullptr;
-
     void Voxaudio::Init(const std::filesystem::path& configFile)
     {
         s_Engine = new FmodCoreEngine(configFile);
     }
+
     void Voxaudio::Update(float deltaTimeSeconds)
     {
-        s_Engine->Update();
+        s_Engine->Update(deltaTimeSeconds);
     }
+
     void Voxaudio::Shutdown()
     {
         delete s_Engine;
     }
 
-    int Voxaudio::RegisterSound(const SoundDefinition& soundDef, bool load)
+    TypeId Voxaudio::RegisterSound(const SoundDefinition& soundDef, bool load)
     {
+        TypeId soundId = s_Engine->NextSoundId++;
 
-    }
-    void Voxaudio::UnregisterSound(int soundId)
-    {
+        s_Engine->Sounds[soundId] = std::make_unique<Sound>(soundDef);
 
-    }
-    void Voxaudio::LoadSound(int soundId)
-    {
-
-    }
-    void Voxaudio::UnloadSound(int soundId)
-    {
-
-    }
-/*
-    void Voxaudio::LoadSound(const std::string& name, bool is3D, bool isLooping, bool isStream)
-    {
-        auto soundIt = s_Engine->Sounds.find(name);
-        if (soundIt != s_Engine->Sounds.end())
+        if(load)
         {
-            // The sound is already loaded.
-            return;
+            LoadSound(soundId);
         }
 
-        FMOD_MODE mode = FMOD_DEFAULT;
-        mode |= is3D ? FMOD_3D : FMOD_2D;
-        mode |= isLooping ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF;
-        mode |= isStream ? FMOD_CREATESTREAM : FMOD_CREATECOMPRESSEDSAMPLE;
-
-        FMOD::Sound* soundPtr = nullptr;
-        s_Engine->System->createSound(name.c_str(), mode, nullptr, &soundPtr);
-        if (soundPtr)
-        {
-            s_Engine->Sounds[name] = soundPtr;
-        }
+        return soundId;
     }
 
-    void Voxaudio::UnloadSound(const std::string& name)
+    void Voxaudio::UnregisterSound(TypeId soundId)
     {
-        auto soundIt = s_Engine->Sounds.find(name);
+        auto soundIt = s_Engine->Sounds.find(soundId);
         if (soundIt == s_Engine->Sounds.end()) return;
-        soundIt->second->release();
         s_Engine->Sounds.erase(soundIt);
     }
-*/
+
+    void Voxaudio::LoadSound(TypeId soundId)
+    {
+        s_Engine->LoadSound(soundId);
+    }
+
+    void Voxaudio::UnloadSound(TypeId soundId)
+    {
+        s_Engine->UnloadSound(soundId);
+    }
+
     void Voxaudio::Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up)
     {
         auto fmodPos = FmodHelper::VectorToFmod(position);
@@ -97,77 +87,75 @@ namespace Voxymore::Audio
         s_Engine->System->set3DListenerAttributes(0, &fmodPos, &fmodVel, &fmodLook, &fmodUp);
     }
 
-    int Voxaudio::PlaySound(const std::string& name, const Vector3& pos, float volumedB)
+    TypeId Voxaudio::PlaySound(TypeId soundId, const Vector3& pos, float volumedB)
     {
-        int channelId = s_Engine->NextChannelId++;
+        TypeId channelId = s_Engine->NextChannelId++;
 
-        auto soundIt = s_Engine->Sounds.find(name);
-        if (soundIt == s_Engine->Sounds.end())
-        {
-            LoadSound(name);
-            soundIt = s_Engine->Sounds.find(name);
-            if (soundIt == s_Engine->Sounds.end())
-            {
-                return channelId;
-            }
-        }
+        auto soundIt = s_Engine->Sounds.find(soundId);
+        if (soundIt == s_Engine->Sounds.end()) return channelId;
 
-        FMOD::Channel* channel = nullptr;
-        s_Engine->System->playSound(soundIt->second, nullptr, true, &channel);
-        if (channel)
-        {
-            auto position = FmodHelper::VectorToFmod(pos);
-            channel->set3DAttributes(&position, nullptr);
-            channel->setVolume(Helper::dBToVolume(volumedB));
-            channel->setPaused(false);
-            s_Engine->Channels[channelId] = channel;
-        }
+        s_Engine->Channels[channelId] = std::make_unique<Channel>(*s_Engine, soundId, soundIt->second->m_Definition, pos, volumedB);
 
         return channelId;
     }
 
-    void Voxaudio::StopChannel(int channelId)
+    void Voxaudio::StopChannel(TypeId channelId, float fadeTimeSeconds)
     {
         bool isPlaying = false;
-        auto tFoundIt = s_Engine->Channels.find(channelId);
-        if(tFoundIt == s_Engine->Channels.end()) return;
+        auto channelIt = s_Engine->Channels.find(channelId);
+        if(channelIt == s_Engine->Channels.end()) return;
 
-        tFoundIt->second->stop();
+        if(fadeTimeSeconds <= 0.0f)
+        {
+            channelIt->second->m_Channel->stop();
+        }
+        else
+        {
+            channelIt->second->m_StopRequested = true;
+            channelIt->second->m_StopFader.StartFade(0.0f, fadeTimeSeconds);
+        }
     }
 
     void Voxaudio::StopAllChannels()
     {
-        for (auto it = s_Engine->Channels.begin(); it != s_Engine->Channels.end() ; it++)
+        for (auto& channel : s_Engine->Channels)
         {
-            it->second->stop();
+            channel.second->m_Channel->stop();
         }
     }
 
-    void Voxaudio::SetChannel3dPosition(int channelId, const Vector3& position)
+    void Voxaudio::SetChannel3dPosition(TypeId channelId, const Vector3& position)
     {
         auto tFoundIt = s_Engine->Channels.find(channelId);
         if(tFoundIt == s_Engine->Channels.end()) return;
 
-        auto fmodVec = FmodHelper::VectorToFmod(position);
-        tFoundIt->second->set3DAttributes(&fmodVec, nullptr);
+        tFoundIt->second->m_Position = position;
     }
 
-    void Voxaudio::SetChannelVolume(int channelId, float volumedB)
+    void Voxaudio::SetChannelVolume(TypeId channelId, float volumedB)
     {
         auto tFoundIt = s_Engine->Channels.find(channelId);
         if(tFoundIt == s_Engine->Channels.end()) return;
 
-        tFoundIt->second->setVolume(Helper::dBToVolume(volumedB));
+        tFoundIt->second->m_VolumedB = Helper::dBToVolume(volumedB);
     }
 
-    bool Voxaudio::IsPlaying(int channelId) const
+    bool Voxaudio::IsPlaying(TypeId channelId)
     {
         bool isPlaying = false;
         auto tFoundIt = s_Engine->Channels.find(channelId);
         if(tFoundIt == s_Engine->Channels.end()) return isPlaying;
 
-        tFoundIt->second->isPlaying(&isPlaying);
+        isPlaying = tFoundIt->second->IsPlaying();
         return isPlaying;
     }
 
+    OneShotSound Voxaudio::PlayOnShot(const SoundDefinition &soundDef, const Vector3& pos, float volumedB)
+    {
+        TypeId soundId = RegisterSound(soundDef, false);
+        s_Engine->Sounds[soundId]->m_OneShot = true;
+        LoadSound(soundId);
+        TypeId channelId = PlaySound(soundId, pos, volumedB);
+        return {soundId, channelId};
+    }
 }

@@ -3,7 +3,7 @@
 #include "Voxaudio.hpp"
 #include <cmath>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <filesystem>
 #include <string>
 #include <fmod.hpp>
@@ -28,6 +28,64 @@ namespace Voxymore::Audio
         int numberOfChannels = 128;
     };
 
+    class AudioFader
+    {
+    private:
+        float FromVolumedB = 0.0f;
+        float ToVolumedB = 0.0f;
+        float TimeFade = 0.0f;
+        float CurrentTime = 0.0f;
+    public:
+        // Fade in
+        void StartFade(float toVolumedB, float fadeTimeSeconds);
+        // Fade out
+        void StartFade(float fromVolumedB, float toVolumedB, float fadeTimeSeconds);
+        // Update fade
+        void Update(float deltaTimeSeconds);
+        bool IsFinished() const;
+        float GetCurrentVolumedB() const;
+        float GetCurrentVolume() const;
+    };
+
+    struct Sound
+    {
+        Sound(const SoundDefinition&, bool oneShot = false);
+
+        FMOD::Sound* m_Sound = nullptr;
+        SoundDefinition m_Definition;
+        bool m_OneShot = false;
+    };
+
+    class FmodCoreEngine;
+
+    struct Channel
+    {
+        Channel(FmodCoreEngine& engine, TypeId soundId, const SoundDefinition& definition, const Vector3& position, float volumedB);
+
+        enum class State
+        {Initialize, ToPlay, Loading, Playing, Stopping, Stopped, Virtualizing, Virtual, Devirtualize};
+
+        FmodCoreEngine& m_Engine;
+        FMOD::Channel* m_Channel;
+        TypeId m_SoundId;
+        Vector3 m_Position;
+        float m_VolumedB = 0.0f;
+        float m_SoundVolume = 0.0f;
+        State m_State = State::Initialize;
+        bool m_StopRequested = false;
+
+        AudioFader m_StopFader;
+        AudioFader m_VirtualizeFader;
+
+        void Update(float deltaTime);
+        void UpdateChannelParameters();
+        bool ShouldBeVirtual(bool allowVirtualOneShot) const;
+        bool IsPlaying() const;
+        float GetVolumedB() const;
+    private:
+        bool IsOneShot() const;
+    };
+
 	class FmodCoreEngine
 	{
     private:
@@ -39,16 +97,22 @@ namespace Voxymore::Audio
 		FmodCoreEngine(const std::filesystem::path& configPath);
 		~FmodCoreEngine();
 
-		void Update();
+		void Update(float deltaTimeSecond);
 
-		int NextChannelId;
+        void LoadSound(TypeId soundId);
+        void UnloadSound(TypeId soundId);
+
+        bool SoundIsLoaded(TypeId soundId) const;
+    public:
+        TypeId NextChannelId;
+        TypeId NextSoundId;
 
         //TODO: Benchmark to see if std::unordered_map is not faster for the usage.
-		typedef std::map<std::string, FMOD::Sound*> SoundMap;
-		typedef std::map<int, FMOD::Channel*> ChannelMap;
+        typedef std::unordered_map<TypeId, std::unique_ptr<Sound>> SoundMap;
+        typedef std::unordered_map<TypeId, std::unique_ptr<Channel>> ChannelMap;
 
-		SoundMap Sounds;
-		ChannelMap Channels;
+        SoundMap Sounds;
+        ChannelMap Channels;
     private:
         void ReadConfigFile();
         void WriteConfigFile();

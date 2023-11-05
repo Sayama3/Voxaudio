@@ -7,6 +7,7 @@
 namespace Voxymore::Audio
 {
 	using Vector3 = glm::vec3;
+    typedef uint32_t TypeId;
 
     //TODO: Find a way to save and load all the sound definitions from disk
     struct SoundDefinition
@@ -20,6 +21,12 @@ namespace Voxymore::Audio
         bool isStream = false;
     };
 
+    struct OneShotSound
+    {
+        TypeId SoundId;
+        TypeId ChannelId;
+    };
+
 	class Voxaudio
 	{
 	public:
@@ -27,24 +34,26 @@ namespace Voxymore::Audio
 		static void Update(float deltaTimeSeconds);
 		static void Shutdown();
 
-        int RegisterSound(const SoundDefinition& soundDef, bool load = true);
-        void UnregisterSound(int soundId);
+        static TypeId RegisterSound(const SoundDefinition& soundDef, bool load = true);
+        static void UnregisterSound(TypeId soundId);
 
-        void LoadSound(int soundId);
-        void UnloadSound(int soundId);
+        static void LoadSound(TypeId soundId);
+        static void UnloadSound(TypeId soundId);
 
         //TODO: bool ShouldBeVirtual(bool allowOneShotVirtuals) const
 
-		void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up);
-		void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up, const Vector3& velocity);
+		static void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up);
+		static void Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up, const Vector3& velocity);
 
-		int PlaySound(const std::string& name, const Vector3& pos = { 0,0,0 }, float volumedB = 0.0f);
-		void StopChannel(int channelId);
-		void StopAllChannels();
+		static TypeId PlaySound(TypeId soundId, const Vector3& pos = { 0,0,0 }, float volumedB = 0.0f);
+        static OneShotSound PlayOnShot(const SoundDefinition& soundDef, const Vector3& pos = { 0,0,0 }, float volumedB = 0.0f);
 
-		void SetChannel3dPosition(int channelId, const Vector3& position);
-		void SetChannelVolume(int channelId, float volumedB);
-		bool IsPlaying(int channelId) const;
+		static void StopChannel(TypeId channelId, float fadeTimeSeconds = 0.0f);
+		static void StopAllChannels();
+
+		static void SetChannel3dPosition(TypeId channelId, const Vector3& position);
+		static void SetChannelVolume(TypeId channelId, float volumedB);
+		static bool IsPlaying(TypeId channelId);
 	};
 
     namespace Helper
