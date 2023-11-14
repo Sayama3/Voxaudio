@@ -1,3 +1,7 @@
+//
+// Created by ianpo on 04/11/2023.
+//
+
 #include "FmodCoreEngine.hpp"
 #include "FileDialogs.hpp"
 #include <vector>
@@ -120,15 +124,6 @@ namespace Voxymore::Audio
         return soundIt->second->m_Sound != nullptr;
     }
 
-    FMOD_VECTOR FmodHelper::VectorToFmod(const Vector3& v)
-    {
-        FMOD_VECTOR fv;
-        fv.x = v.x;
-        fv.y = v.y;
-        fv.z = v.z;
-        return fv;
-    }
-
     Channel::Channel(FmodCoreEngine &engine, TypeId soundId, const SoundDefinition &definition, const Vector3 &position, float volumedB)
         : m_Engine(engine), m_Channel(nullptr), m_SoundId(soundId), m_Position(position), m_VolumedB(volumedB), m_SoundVolume(Helper::dBToVolume(volumedB))
     {
@@ -141,6 +136,10 @@ namespace Voxymore::Audio
             UpdateChannelParameters();
             m_Channel->setPaused(false);
         }
+    }
+
+    Channel::~Channel()
+    {
     }
 
     void Channel::Update(float deltaTime)
@@ -310,11 +309,36 @@ namespace Voxymore::Audio
         return soundIt->second->m_OneShot;
     }
 
+    // It should be some calculation to see if the sound is still worth playing.
+    // Maybe a lookup in the sound defintion to see if the sound is worth virtualizing.
+    // Most likely a check of the distance of the sound so when it's above the specified threshold we virtualize it.
+    // Currently, only a distance check is done.
     bool Channel::ShouldBeVirtual(bool allowVirtualOneShot) const
     {
         if(!allowVirtualOneShot && IsOneShot()) return false;
-        //TODO: Set something for real. But for now, just returning false.
-        return false;
+
+        auto defPtr = GetSoundDefinition();
+        if (!defPtr) return false;
+
+        FMOD_VECTOR pos;
+        FMOD_VECTOR vel;
+        FMOD_VECTOR forward;
+        FMOD_VECTOR up;
+        m_Engine.System->get3DListenerAttributes(0, &pos, &vel, &forward, &up);
+
+        Vector3 listenerPos = FmodHelper::FmodToVector(pos);
+
+        float distance = glm::distance(m_Position, listenerPos);
+
+        return distance > defPtr->maxDistance;
+    }
+
+
+    const SoundDefinition* Channel::GetSoundDefinition() const
+    {
+        auto soundIt = m_Engine.Sounds.find(m_SoundId);
+        if (soundIt == m_Engine.Sounds.end()) return nullptr;
+        return &soundIt->second->m_Definition;
     }
 
     Sound::Sound(const SoundDefinition & def, bool oneShot) : m_Sound(nullptr), m_Definition(def), m_OneShot(oneShot)
@@ -353,5 +377,23 @@ namespace Voxymore::Audio
 
     float AudioFader::GetCurrentVolume() const {
         return Helper::dBToVolume(GetCurrentVolumedB());
+    }
+
+    FMOD_VECTOR FmodHelper::VectorToFmod(const Vector3& v)
+    {
+        FMOD_VECTOR fv;
+        fv.x = v.x;
+        fv.y = v.y;
+        fv.z = v.z;
+        return fv;
+    }
+
+    Vector3 FmodToVector(const FMOD_VECTOR& fv)
+    {
+        Vector3 v;
+        v.x = fv.x;
+        v.y = fv.y;
+        v.z = fv.z;
+        return v;
     }
 }

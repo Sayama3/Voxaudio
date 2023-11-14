@@ -1,3 +1,7 @@
+//
+// Created by ianpo on 04/11/2023.
+//
+
 #pragma once
 
 #include "Voxaudio.hpp"
@@ -61,6 +65,7 @@ namespace Voxymore::Audio
     struct Channel
     {
         Channel(FmodCoreEngine& engine, TypeId soundId, const SoundDefinition& definition, const Vector3& position, float volumedB);
+        ~Channel();
 
         enum class State
         {Initialize, ToPlay, Loading, Playing, Stopping, Stopped, Virtualizing, Virtual, Devirtualize};
@@ -84,6 +89,7 @@ namespace Voxymore::Audio
         float GetVolumedB() const;
     private:
         bool IsOneShot() const;
+        const SoundDefinition* GetSoundDefinition() const;
     };
 
 	class FmodCoreEngine
@@ -121,6 +127,7 @@ namespace Voxymore::Audio
     namespace FmodHelper
     {
         FMOD_VECTOR VectorToFmod(const Vector3& v);
+        Vector3 FmodToVector(const FMOD_VECTOR& fv);
         std::string GetFmodError(FMOD_RESULT result);
     }
 }
