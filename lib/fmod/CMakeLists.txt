@@ -1,14 +1,22 @@
 cmake_minimum_required(VERSION 3.23)
 
+# Thanks to https://github.com/ezEngine/thirdparty-fmod/blob/af3ed3432bb5480cc63ce7f49db5dd68bb073d2a/CMakeLists.txt for finding out how to do it.
 
-option(FMOD_USE_CUSTOM_INSTALL_PATH "If on, the library will search for the 'FMOD_INSTALL_PATH' instead of the one already installed." OFF)
+#option(FMOD_USE_CUSTOM_INSTALL_PATH "If on, the library will search for the 'FMOD_INSTALL_PATH' instead of the one already installed." OFF)
 option(FMOD_INSTALL_PATH, "The custom install path of fmod")
+
+if(DEFINED ENV{FMOD_INSTALL_PATH})
+	set(FMOD_INSTALL_PATH "$ENV{FMOD_INSTALL_PATH}")
+	message(STATUS "Found FMOD_INSTALL_PATH in environment variables : $ENV{FMOD_INSTALL_PATH}")
+else()
+	message(STATUS "Environment Variable not found.")
+endif()
 
 # TODO: Add all the version supported by fmod
 # TODO: Only use the installed version of Fmod. So no legal problems.
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	if(FMOD_USE_CUSTOM_INSTALL_PATH)
+	if(DEFINED FMOD_INSTALL_PATH)
 		set(FMOD_SEARCH_PATH ${FMOD_INSTALL_PATH})
 	else()
 		message(FATAL_ERROR "No default install path for linux.")
@@ -18,8 +26,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(FMOD_PREFIX "lib")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 	# UWP builds
-
-	if (FMOD_USE_CUSTOM_INSTALL_PATH)
+	
+	if(DEFINED ${FMOD_INSTALL_PATH})
 		set(FMOD_SEARCH_PATH ${FMOD_INSTALL_PATH})
 	else()
 		set(FMOD_SEARCH_PATH "[HKEY_CURRENT_USER\\Software\\FMOD\ Studio\ API\ Universal\ Windows\ Platform]")
@@ -31,8 +39,7 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 		
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	# Desktop Windows builds
-		
-	if (FMOD_USE_CUSTOM_INSTALL_PATH)
+	if(DEFINED FMOD_INSTALL_PATH)
 		set(FMOD_SEARCH_PATH ${FMOD_INSTALL_PATH})
 	else()
 		set(FMOD_SEARCH_PATH "[HKEY_CURRENT_USER\\Software\\FMOD\ Studio\ API\ Windows]")
@@ -53,7 +60,10 @@ set (FMOD_DIR_STUDIO "${FMOD_SDK_LOCATION}/api/studio")
 set (FMOD_DIR_FSBANK "${FMOD_SDK_LOCATION}/api/fsbank")
 set (FMOD_DIR_CORE "${FMOD_SDK_LOCATION}/api/core")
 
-if (EZ_CMAKE_ARCHITECTURE_ARM)
+#TODO: find a way to check if we use an ARM architecture.
+set(VXM_CMAKE_ARCHITECTURE_ARM OFF)
+
+if (VXM_CMAKE_ARCHITECTURE_ARM)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 		message(FATAL_ERROR "Fmod does not support arm64, or support needs to be added to EZ once binaries become available")
 	else()
