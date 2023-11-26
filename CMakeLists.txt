@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT "20")
 
 option(DONT_ADD_GLM "The library will assume a target 'glm' already exist." OFF)
 option(DONT_ADD_YAML-CPP "The library will assume a target 'yaml-cpp::yaml-cpp' already exist." OFF)
-option(USE_FMOD_CORE_BACKEND "Use Fmod Core for the backend." ON)
-option(USE_FMOD_STUDIO_BACKEND "Use Fmod Studio for the backend." OFF)
+option(USE_FMOD_CORE_BACKEND "Use Fmod Core for the backend." OFF)
+option(USE_FMOD_STUDIO_BACKEND "Use Fmod Studio for the backend." ON)
 
 if(USE_FMOD_CORE_BACKEND OR USE_FMOD_STUDIO_BACKEND)
     add_subdirectory(lib/fmod)
@@ -30,11 +30,11 @@ set(GLOBAL_SRC_FILES
     "Global/portable-file-dialogs.h"
 )
 
-#set(FMOD_STUDIO_SRC_FILES 
-#    "src/FmodStudio/Voxaudio.cpp"
-#    "src/FmodStudio/FmodStudioEngine.hpp"
-#    "src/FmodStudio/FmodStudioEngine.cpp"
-#)
+set(FMOD_STUDIO_SRC_FILES
+    "FmodStudio/FmodStudioVoxaudio.cpp"
+    "FmodStudio/FmodStudioEngine.hpp"
+    "FmodStudio/FmodStudioEngine.cpp"
+)
 
 set(FMOD_CORE_SRC_FILES 
     "FmodCore/FmodCoreVoxaudio.cpp"
@@ -44,7 +44,6 @@ set(FMOD_CORE_SRC_FILES
 
 if(USE_FMOD_STUDIO_BACKEND)
     set(SRC_FILES ${GLOBAL_SRC_FILES} ${FMOD_STUDIO_SRC_FILES})
-    message(FATAL_ERROR "The FMOD Studio Backend is not ready yet...")
 elseif(USE_FMOD_CORE_BACKEND)
     set(SRC_FILES ${GLOBAL_SRC_FILES} ${FMOD_CORE_SRC_FILES})
 else()

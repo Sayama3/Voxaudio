@@ -3,7 +3,7 @@
 //
 
 #include "Voxaudio.hpp"
-#include "FmodCoreEngine.hpp"
+#include "FmodStudioEngine.hpp"
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -13,7 +13,7 @@
 
 namespace Voxymore::Audio
 {
-    FmodCoreEngine* s_Engine = nullptr;
+    FmodStudioEngine* s_Engine = nullptr;
 
     float Helper::dBToVolume(float dB)
     {
@@ -27,7 +27,7 @@ namespace Voxymore::Audio
 
     void Voxaudio::Init(const std::filesystem::path& configFile)
     {
-        s_Engine = new FmodCoreEngine(configFile);
+        s_Engine = new FmodStudioEngine(configFile);
     }
 
     void Voxaudio::Update(float deltaTimeSeconds)
@@ -73,21 +73,25 @@ namespace Voxymore::Audio
 
     void Voxaudio::Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up)
     {
-        auto fmodPos = FmodHelper::VectorToFmod(position);
-        auto fmodLook = FmodHelper::VectorToFmod(look);
-        auto fmodUp = FmodHelper::VectorToFmod(up);
+        FMOD_3D_ATTRIBUTES attr;
+        attr.position = FmodHelper::VectorToFmod(position);
+        attr.forward = FmodHelper::VectorToFmod(look);
+        attr.up = FmodHelper::VectorToFmod(up);
+
         //TODO: Add a multi-listener system.
-        s_Engine->System->set3DListenerAttributes(0, &fmodPos, nullptr, &fmodLook, &fmodUp);
+        CheckFmod(s_Engine->System->setListenerAttributes(0, &attr));
     }
 
     void Voxaudio::Set3dListenerAndOrientation(const Vector3& position, const Vector3& look, const Vector3& up, const Vector3& velocity)
     {
-        auto fmodPos = FmodHelper::VectorToFmod(position);
-        auto fmodLook = FmodHelper::VectorToFmod(look);
-        auto fmodUp = FmodHelper::VectorToFmod(up);
-        auto fmodVel = FmodHelper::VectorToFmod(velocity);
+        FMOD_3D_ATTRIBUTES attr;
+        attr.position = FmodHelper::VectorToFmod(position);
+        attr.forward = FmodHelper::VectorToFmod(look);
+        attr.up = FmodHelper::VectorToFmod(up);
+        attr.velocity = FmodHelper::VectorToFmod(velocity);
+
         //TODO: Add a multi-listener system.
-        s_Engine->System->set3DListenerAttributes(0, &fmodPos, &fmodVel, &fmodLook, &fmodUp);
+        CheckFmod(s_Engine->System->setListenerAttributes(0, &attr));
     }
 
     TypeId Voxaudio::PlaySound(TypeId soundId, const Vector3& pos, float volumedB)
@@ -110,7 +114,8 @@ namespace Voxymore::Audio
 
         if(fadeTimeSeconds <= 0.0f)
         {
-            channelIt->second->m_Channel->stop();
+            channelIt->second->m_StopRequested = true;
+//            channelIt->second->m_EventInstance->stop(FMOD_STUDIO_STOP_IMMEDIATE);
         }
         else
         {
@@ -123,7 +128,7 @@ namespace Voxymore::Audio
     {
         for (auto& channel : s_Engine->Channels)
         {
-            channel.second->m_Channel->stop();
+            channel.second->m_EventInstance->stop(FMOD_STUDIO_STOP_IMMEDIATE);
         }
     }
 
